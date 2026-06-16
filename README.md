@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⇄ PQ Transfer
+<a href="https://github.com/effjy/pqtransfer/"><img src="titles/pq-transfer-title.svg" height="52" alt="PQ Transfer"></a>
 
 **Send a file directly from one machine to another over an end-to-end
 encrypted, post-quantum channel — no server, no cloud, no account.**
