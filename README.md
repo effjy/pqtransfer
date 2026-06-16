@@ -14,7 +14,7 @@ encrypted, post-quantum channel — no server, no cloud, no account.**
 
 <br>
 
-<img src="screenshot.png" width="640" alt="PQ Transfer screenshot">
+<img src="screenshot1.png" width="640" alt="PQ Transfer screenshot">
 
 </div>
 
