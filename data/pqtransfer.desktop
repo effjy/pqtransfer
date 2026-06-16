@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PQ Transfer
+GenericName=Encrypted File Transfer
+Comment=Send files peer-to-peer over a post-quantum encrypted channel
+Exec=pqtransfer
+Icon=pqtransfer
+Terminal=false
+Categories=Network;FileTransfer;Security;GTK;
+Keywords=transfer;send;receive;p2p;encrypt;post-quantum;kyber;security;
+StartupNotify=true
+StartupWMClass=pqtransfer
