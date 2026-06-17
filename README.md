@@ -5,6 +5,7 @@
 **Send a file directly from one machine to another over an end-to-end
 encrypted, post-quantum channel — no server, no cloud, no account.**
 
+<a href="https://github.com/effjy/pqtransfer/releases"><img src="https://img.shields.io/badge/version-1.0.1-8a2be2?style=flat-square&labelColor=1a1a1a" alt="Version 1.0.1"></a>
 <a href="https://github.com/effjy/pqtransfer"><img src="https://img.shields.io/badge/License-MIT-teal?style=flat-square&labelColor=1a1a1a" alt="MIT License"></a>
 <a href="https://github.com/effjy/pqtransfer"><img src="https://img.shields.io/badge/Language-C-teal?style=flat-square&labelColor=1a1a1a" alt="C"></a>
 <a href="https://github.com/effjy/pqtransfer"><img src="https://img.shields.io/badge/Platform-Linux-8a2be2?style=flat-square&labelColor=1a1a1a" alt="Linux"></a>
@@ -186,6 +187,26 @@ untrusted.** A short, memorable shared word is enough; CPace does the rest.
 
 PQ Transfer protects data **in transit** between two endpoints you control. It
 is not an anonymity tool — the two IP addresses see each other.
+
+---
+
+## Changelog
+
+### v1.0.1
+
+Bug-fix and hardening release — no wire-protocol changes; v1.0.0 peers
+interoperate.
+
+- **Hardened** the libsodium-backed secure passphrase buffer: it now zeroes the
+  unused tail of its guarded allocation on every edit, so a typed-then-cleared
+  passphrase no longer lingers in locked memory until the widget is freed, and
+  guards its capacity growth against an integer overflow on a pathological paste.
+- **Durability:** the receiver now `fsync`s the received file and its parent
+  directory before/after the atomic rename, so a crash or power loss cannot
+  publish a truncated file as a completed transfer.
+- **Robustness:** the receiver now rejects empty, non-final content frames,
+  so a misbehaving peer can no longer keep it looping indefinitely on frames
+  that never advance toward the declared file size.
 
 ---
 

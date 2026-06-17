@@ -5,7 +5,7 @@
 #   sudo make uninstall remove all installed files
 #   make clean        remove build artifacts
 
-VERSION := 1.0.0
+VERSION := 1.0.1
 BIN      := pqtransfer
 
 PREFIX  ?= /usr/local
