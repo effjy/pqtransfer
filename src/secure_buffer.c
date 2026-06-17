@@ -29,7 +29,12 @@ G_DEFINE_TYPE(SecureEntryBuffer, secure_entry_buffer, GTK_TYPE_ENTRY_BUFFER)
 static void ensure_cap(SecureEntryBuffer *self, gsize need) {
     if (need <= self->cap) return;
     gsize newcap = self->cap ? self->cap : 32;
-    while (newcap < need) newcap *= 2;
+    /* Double until we fit, guarding against overflow: GtkEntry's default max
+     * length is unlimited, so a pathological paste must not wrap newcap to 0. */
+    while (newcap < need) {
+        if (newcap > G_MAXSIZE / 2) { newcap = need; break; }
+        newcap *= 2;
+    }
     char *nt = sodium_malloc(newcap);
     if (!nt) g_error("secure_buffer: out of locked memory");
     if (self->text) {
@@ -66,6 +71,9 @@ static guint seb_insert_text(GtkEntryBuffer *buffer, guint position,
     self->n_bytes += n_bytes;
     self->n_chars += n_chars;
     self->text[self->n_bytes] = '\0';
+    /* Wipe anything beyond the live text so stale secret bytes never linger
+     * in the guarded region between the terminator and the allocation end. */
+    sodium_memzero(self->text + self->n_bytes + 1, self->cap - self->n_bytes - 1);
 
     gtk_entry_buffer_emit_inserted_text(buffer, position, chars, n_chars);
     return n_chars;
@@ -86,6 +94,9 @@ static guint seb_delete_text(GtkEntryBuffer *buffer, guint position,
         self->n_bytes -= (end - start);
         self->n_chars -= n_chars;
         self->text[self->n_bytes] = '\0';
+        /* Zero the now-unused tail so the deleted secret bytes do not survive
+         * in the guarded region until the buffer is finally freed. */
+        sodium_memzero(self->text + self->n_bytes + 1, self->cap - self->n_bytes - 1);
 
         gtk_entry_buffer_emit_deleted_text(buffer, position, n_chars);
     }

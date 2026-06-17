@@ -15,7 +15,7 @@
 #include "secure_buffer.h"
 
 #ifndef PQTRANSFER_VERSION
-#define PQTRANSFER_VERSION "1.0.0"
+#define PQTRANSFER_VERSION "1.0.1"
 #endif
 #define APP_ID "org.pqtransfer.PQTransfer"
 #define DEFAULT_PORT 5800

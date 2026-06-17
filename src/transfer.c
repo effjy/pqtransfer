@@ -255,6 +255,32 @@ static int safe_output_path(const char *out_dir, const char *name,
     return -1;
 }
 
+/* fsync the directory containing `path`, so the rename that publishes the
+ * received file is itself durable -- otherwise a crash just after rename()
+ * can leave the directory entry pointing at a truncated (or missing) file on
+ * some filesystems. Best-effort: failures here do not fail the transfer. */
+static void fsync_parent_dir(const char *path) {
+    char dir[4096];
+    const char *slash = strrchr(path, '/');
+    if (slash == path) {
+        dir[0] = '/'; dir[1] = '\0';
+    } else if (slash) {
+        size_t n = (size_t)(slash - path);
+        if (n >= sizeof(dir)) return;
+        memcpy(dir, path, n); dir[n] = '\0';
+    } else {
+        dir[0] = '.'; dir[1] = '\0';
+    }
+    int fd = open(dir, O_RDONLY
+#ifdef O_DIRECTORY
+                  | O_DIRECTORY
+#endif
+                  );
+    if (fd < 0) return;
+    fsync(fd);
+    close(fd);
+}
+
 /* ----- listener -------------------------------------------------------- */
 
 /* Create, bind and listen on port. With no bind_addr it binds the IPv6
@@ -448,6 +474,13 @@ int pqx_receive(const char *bind_addr, uint16_t port,
             seterr(err, errlen, "Transfer failed: connection lost or tampered stream.");
             goto done;
         }
+        /* A zero-length content frame is only legitimate as the single final
+         * frame (e.g. an empty file, or an exact-chunk-multiple tail). Reject
+         * empty non-final frames so a peer cannot keep us looping forever
+         * sending frames that never advance toward the declared size. */
+        if (ptlen == 0 && !final) {
+            seterr(err, errlen, "Malformed stream (empty frame)."); goto done;
+        }
         /* The sender cannot stream more than the size it declared up front:
          * this bounds disk use and rejects a sender that lies small then keeps
          * sending. (The user also sees the declared size on the progress bar
@@ -467,11 +500,16 @@ int pqx_receive(const char *bind_addr, uint16_t port,
     }
     if (!saw_final) { seterr(err, errlen, "Transfer truncated."); goto done; }
 
-    if (fflush(out) != 0 || ferror(out)) { seterr(err, errlen, "Write error."); goto done; }
+    /* Flush all the way to disk before the rename, so a crash or power loss
+     * cannot publish a truncated/zero-length file as a completed transfer. */
+    if (fflush(out) != 0 || ferror(out) || fsync(fileno(out)) != 0) {
+        seterr(err, errlen, "Write error."); goto done;
+    }
     fclose(out); out = NULL;
     if (rename(tmp_path, out_path) != 0) {
         seterr(err, errlen, "Could not finalize the output file."); goto done;
     }
+    fsync_parent_dir(out_path);   /* make the rename durable */
     have_tmp = 0;
     if (saved_path && saved_len) snprintf(saved_path, saved_len, "%s", out_path);
     ret = 0;
